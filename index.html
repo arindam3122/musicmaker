@@ -109,7 +109,7 @@ input[type=file]{display:none}
   transition:width .1s linear;
 }
 
-/* --- MODAL (BIGGER) --- */
+/* --- MODAL --- */
 .modal-overlay{
   position:fixed;
   top:0;left:0;right:0;bottom:0;
@@ -139,63 +139,60 @@ input[type=file]{display:none}
   cursor:pointer;
 }
 
-audio{width:100%; margin-top:10px}
-@media(max-width:600px){
-  .btn{flex:1}
-}
-/* ----- Improved Audio Player (Card Style) ----- */
-audio {
-  width: 100%;
+/* --------------------------------------------- */
+/*           CUSTOM AUDIO PLAYER UI              */
+/* --------------------------------------------- */
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   background: #ffffff;
+  padding: 12px 14px;
   border-radius: 14px;
-  padding: 6px 4px;
   box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  margin-top: 12px;
 }
 
-/* Controls panel */
-audio::-webkit-media-controls-panel {
-  background: #ffffff;
-  border-radius: 14px;
-  padding: 4px;
-}
-
-/* Play button — keep default icon */
-audio::-webkit-media-controls-play-button {
-  background-color: #eef2ff;
+.play-btn {
+  background: var(--accent);
+  color: #fff;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  /* DON'T override background-image */
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
 }
 
-/* Pause button — same fix */
-audio::-webkit-media-controls-pause-button {
-  background-color: #eef2ff;
-  border-radius: 50%;
+.time {
+  font-size: 12px;
+  color: #555;
+  min-width: 38px;
+  text-align: center;
 }
 
-/* Timeline/progress bar */
-audio::-webkit-media-controls-timeline {
-  border-radius: 10px;
-  margin: 0 6px;
+.progress {
+  flex: 1;
+  background: #e6e6e6;
+  height: 6px;
+  border-radius: 6px;
+  position: relative;
+  cursor: pointer;
 }
 
-/* Current time + duration */
-audio::-webkit-media-controls-current-time-display,
-audio::-webkit-media-controls-time-remaining-display {
-  color: #4b5563 !important;
-  font-weight: 500;
+.progress .bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 6px;
 }
 
-/* Volume slider */
-audio::-webkit-media-controls-volume-slider {
-  border-radius: 10px;
+.volume {
+  width: 80px;
 }
 
-/* Mute/speaker button — keep icon */
-audio::-webkit-media-controls-mute-button {
-  background-color: #eef2ff;
-  border-radius: 50%;
-  /* DON'T override background-image */
-}
+audio { display:none; }
 
 </style>
 </head>
@@ -227,9 +224,17 @@ audio::-webkit-media-controls-mute-button {
   <div class="file-name" id="bgName">No file selected</div>
 </div>
 
-<audio id="bgAudio" controls></audio>
+<!-- Custom Audio Player -->
+<div class="player" id="bgPlayer">
+  <button class="play-btn" data-target="bgAudio">▶</button>
+  <span class="time current">0:00</span>
+  <div class="progress"><div class="bar"></div></div>
+  <span class="time duration">0:00</span>
+  <input type="range" class="volume" min="0" max="1" step="0.01" value="1">
+</div>
 
-<!-- Background volume slider -->
+<audio id="bgAudio"></audio>
+
 <div style="margin-top:15px">
   <label>Background Volume: </label>
   <input type="range" id="bgVolume" min="0" max="1" value="0.8" step="0.01">
@@ -264,7 +269,16 @@ audio::-webkit-media-controls-mute-button {
   <a class="btn" id="download" style="display:none">Download</a>
 </div>
 
-<audio id="mixAudio" controls></audio>
+<!-- Custom Player for final mix -->
+<div class="player" id="mixPlayer">
+  <button class="play-btn" data-target="mixAudio">▶</button>
+  <span class="time current">0:00</span>
+  <div class="progress"><div class="bar"></div></div>
+  <span class="time duration">0:00</span>
+  <input type="range" class="volume" min="0" max="1" step="0.01" value="1">
+</div>
+
+<audio id="mixAudio"></audio>
 </div>
 
 </div>
@@ -297,9 +311,7 @@ let bgFile, recorder, chunks=[], stream;
 let audioCtx, analyser, meterRAF;
 
 /* Update background volume live */
-bgVolume.oninput = () => {
-  bgAudio.volume = bgVolume.value;
-};
+bgVolume.oninput = () => { bgAudio.volume = bgVolume.value; };
 
 /* Upload */
 bgInput.onchange=e=>{
@@ -432,7 +444,7 @@ async function mixAudioFiles(bgFile,voiceBlob){
   const bgSrc=off.createBufferSource();
   bgSrc.buffer=bg;
   const bgGain=off.createGain();
-  bgGain.gain.value=parseFloat(bgVolume.value);   // ⬅ USE USER VOLUME
+  bgGain.gain.value=parseFloat(bgVolume.value);
   bgSrc.connect(bgGain).connect(off.destination);
 
   const vSrc=off.createBufferSource();
@@ -479,6 +491,65 @@ function encodeWAV(buf){
   }
   return new Blob([v],{type:'audio/wav'});
 }
+
+/* =================================================== */
+/* INITIALIZE CUSTOM AUDIO PLAYERS                     */
+/* =================================================== */
+
+function initPlayer(playerId, audioId) {
+  const player = document.getElementById(playerId);
+  const audio = document.getElementById(audioId);
+
+  const playBtn = player.querySelector(".play-btn");
+  const currentTimeEl = player.querySelector(".current");
+  const durationEl = player.querySelector(".duration");
+  const progress = player.querySelector(".progress");
+  const bar = player.querySelector(".bar");
+  const volume = player.querySelector(".volume");
+
+  audio.onloadedmetadata = () => {
+    durationEl.textContent = formatTime(audio.duration);
+  };
+
+  playBtn.onclick = () => {
+    if (audio.paused) {
+      audio.play();
+      playBtn.textContent = "⏸";
+    } else {
+      audio.pause();
+      playBtn.textContent = "▶";
+    }
+  };
+
+  audio.ontimeupdate = () => {
+    const percent = (audio.currentTime / audio.duration) * 100;
+    bar.style.width = percent + "%";
+    currentTimeEl.textContent = formatTime(audio.currentTime);
+  };
+
+  progress.onclick = (e) => {
+    const rect = progress.getBoundingClientRect();
+    const offset = e.clientX - rect.left;
+    const percent = offset / rect.width;
+    audio.currentTime = percent * audio.duration;
+  };
+
+  volume.oninput = () => {
+    audio.volume = volume.value;
+  };
+}
+
+function formatTime(sec) {
+  sec = Math.floor(sec);
+  let m = Math.floor(sec / 60);
+  let s = sec % 60;
+  return m + ":" + (s < 10 ? "0" + s : s);
+}
+
+initPlayer("bgPlayer", "bgAudio");
+initPlayer("mixPlayer", "mixAudio");
+
 </script>
+
 </body>
 </html>
