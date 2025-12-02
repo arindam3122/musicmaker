@@ -143,6 +143,60 @@ audio{width:100%; margin-top:10px}
 @media(max-width:600px){
   .btn{flex:1}
 }
+/* ----- Improved Audio Player (Card Style) ----- */
+audio {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 6px 4px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+/* Controls panel */
+audio::-webkit-media-controls-panel {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 4px;
+}
+
+/* Play button — keep default icon */
+audio::-webkit-media-controls-play-button {
+  background-color: #eef2ff;
+  border-radius: 50%;
+  /* DON'T override background-image */
+}
+
+/* Pause button — same fix */
+audio::-webkit-media-controls-pause-button {
+  background-color: #eef2ff;
+  border-radius: 50%;
+}
+
+/* Timeline/progress bar */
+audio::-webkit-media-controls-timeline {
+  border-radius: 10px;
+  margin: 0 6px;
+}
+
+/* Current time + duration */
+audio::-webkit-media-controls-current-time-display,
+audio::-webkit-media-controls-time-remaining-display {
+  color: #4b5563 !important;
+  font-weight: 500;
+}
+
+/* Volume slider */
+audio::-webkit-media-controls-volume-slider {
+  border-radius: 10px;
+}
+
+/* Mute/speaker button — keep icon */
+audio::-webkit-media-controls-mute-button {
+  background-color: #eef2ff;
+  border-radius: 50%;
+  /* DON'T override background-image */
+}
+
 </style>
 </head>
 
