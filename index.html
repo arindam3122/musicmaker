@@ -267,26 +267,36 @@ function stopMeter(){
 }
 
 /* Record */
-recordBtn.onclick=async()=>{
-  if(!bgFile){
+recordBtn.onclick = async () => {
+  if (!bgFile) {
     showMessage("Please upload background music first!");
     return;
   }
 
-  stream=await navigator.mediaDevices.getUserMedia({audio:true});
-  recorder=new MediaRecorder(stream);
-  chunks=[];
-  recorder.ondataavailable=e=>chunks.push(e.data);
+  stream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      noiseSuppression: true,
+      echoCancellation: true,
+      autoGainControl: true,
+      channelCount: 1,
+      sampleRate: 48000
+    }
+  });
 
-  bgAudio.currentTime=0;
+  recorder = new MediaRecorder(stream);
+  chunks = [];
+  recorder.ondataavailable = e => chunks.push(e.data);
+
+  bgAudio.currentTime = 0;
   await bgAudio.play();
 
   recorder.start();
-  statusEl.textContent='recording';
+  statusEl.textContent = 'recording';
   startMeter(stream);
 
-  showMessage("Recording started!");
+  showMessage("Recording started with noise reduction enabled!");
 };
+
 
 stopBtn.onclick=()=>{
   if(recorder && recorder.state==='recording'){
